@@ -1,48 +1,56 @@
-def convert_cvss31_to_cvss40(cvss31_vector):
+def convert_cvss30_to_cvss40(cvss30_vector):
     """
-    Конвертирует вектор CVSS 3.1 в CVSS 4.0.
-    :param cvss31_vector: Строка с вектором CVSS 3.1, например: "AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+    Конвертирует вектор CVSS 3.0 в CVSS 4.0 по указанному алгоритму.
+    :param cvss30_vector: Вектор CVSS 3.0, например: "AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
     :return: Строка с вектором CVSS 4.0
     """
-    # Словари для соответствий метрик
-    attack_vector = {"L": "L", "A": "A", "N": "N", "P": "P"}
-    attack_complexity = {"L": ("L", "N"), "H": ("L", "P")}
-    privileges_required = {"N": "N", "L": "L", "H": "H"}
-    user_interaction = {"N": "N", "R": "R"}
-    scope = {"U": ("N", "N", "N"), "C": ("C", "C", "C")}
-    impact = {"N": "N", "L": "L", "H": "H"}
+    # Разбираем входной вектор CVSS 3.0
+    cvss30_elements = dict(item.split(":") for item in cvss30_vector.split("/"))
 
-    try:
-        # Разбираем входной вектор
-        cvss31_elements = dict(item.split(":") for item in cvss31_vector.split("/")[1:])
+    # Переносим метрики: AV, PR, UI, VC, VI, VA (аналогичные из CVSS 3.0)
+    av = f"AV:{cvss30_elements['AV']}"
+    pr = f"PR:{cvss30_elements['PR']}"
+    ui = f"UI:{cvss30_elements['UI']}"
+    vc = f"VC:{cvss30_elements['C']}"  # Confidentiality Impact
+    vi = f"VI:{cvss30_elements['I']}"  # Integrity Impact
+    va = f"VA:{cvss30_elements['A']}"  # Availability Impact
 
-        # Проверяем обязательные метрики
-        required_metrics = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
-        if not required_metrics.issubset(cvss31_elements.keys()):
-            raise ValueError("Вектор CVSS 3.1 содержит недостаточные метрики.")
+    # Обрабатываем метрики AC и AT
+    ac = cvss30_elements['AC']
+    if ac == 'L':
+        at = 'N'  # Если AC = L, то AT = N
+    else:
+        at = 'P'  # Если AC = H, то AT = P
+    ac = f"AC:{ac}"
+    at = f"AT:{at}"
 
-        # Конвертация метрик
-        av = f"AV:{attack_vector[cvss31_elements['AV']]}"  # Attack Vector
-        ac, at = attack_complexity[cvss31_elements['AC']]  # Attack Complexity & Attack Technique
-        pr = f"PR:{privileges_required[cvss31_elements['PR']]}"  # Privileges Required
-        ui = f"UI:{user_interaction[cvss31_elements['UI']]}"  # User Interaction
-        vc = f"VC:{impact[cvss31_elements['C']]}"  # Confidentiality Impact
-        vi = f"VI:{impact[cvss31_elements['I']]}"  # Integrity Impact
-        va = f"VA:{impact[cvss31_elements['A']]}"  # Availability Impact
-        sc, si, sa = scope[cvss31_elements['S']]  # Scope Changes
+    # Обрабатываем SC, SI, SA в зависимости от S
+    s = cvss30_elements['S']
+    if s == 'U':
+        # Если S = U, то SC, SI, SA = N
+        sc = "SC:N"
+        si = "SI:N"
+        sa = "SA:N"
+    else:
+        # Если S = C, то SC = C, SI = I, SA = A
+        sc = f"SC:{cvss30_elements['C']}"
+        si = f"SI:{cvss30_elements['I']}"
+        sa = f"SA:{cvss30_elements['A']}"
 
-        # Формируем итоговый вектор CVSS 4.0
-        cvss40_vector = f"CVSS:4.0/{av}/AC:{ac}/AT:{at}/{pr}/{ui}/{vc}/{vi}/{va}/SC:{sc}/SI:{si}/SA:{sa}"
-        return cvss40_vector
-
-    except Exception as e:
-        return f"Ошибка: {e}"
+    # Формируем итоговый вектор CVSS 4.0
+    cvss40_vector = f"CVSS:4.0/{av}/{ac}/{at}/{pr}/{ui}/{vc}/{vi}/{va}/{sc}/{si}/{sa}"
+    return cvss40_vector
 
 
 # Основная программа
 if __name__ == "__main__":
-    print("Введите вектор CVSS 3.1:")
-    cvss31_input = input().strip()
-    cvss40_output = convert_cvss31_to_cvss40(cvss31_input)
-    print("Результат конвертации:")
+    # Вводим вектор CVSS 3.0 с клавиатуры
+    print("Введите вектор CVSS 3.0 (например, AV:L/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H):")
+    cvss30_input = input().strip()
+
+    # Конвертируем вектор CVSS 3.0 в CVSS 4.0
+    cvss40_output = convert_cvss30_to_cvss40(cvss30_input)
+
+    # Выводим результат
+    print("Результат конвертации в CVSS 4.0:")
     print(cvss40_output)
